@@ -30,7 +30,7 @@ The following compontents are included in the Manatee package.
 
     config             % configuration file
 
-    manatee            % Perl core program for sRNA analysis
+    Manatee            % Perl core program for sRNA analysis
     
     README.md          % this file
 
@@ -40,7 +40,7 @@ The following compontents are included in the Manatee package.
 ### USAGE with configuration file
 
 ###### Syntax:
-`manatee -config <file> -i <file> -o <dir>`
+`Manatee -config <file> -i <file> -o <dir>`
 
 <table><tr><td>
 
@@ -67,14 +67,6 @@ Path to pre-processed FASTQ or FASTA file. Valid formats: .fa, .fasta, .fastq, .
 	
 Path to directory where the output will be stored.
 
-</td></tr><tr><td>
-	
-    -genome <file>
-	
-</td><td>
-	
-Path to genome FA or FASTA file. 
-
 </td></tr>
 
 </table>
@@ -84,7 +76,7 @@ Path to genome FA or FASTA file.
 ### USAGE with input parameters
 
 ###### Syntax:
-`manatee [OPTIONS] -i <file> -o <dir> -index <ebwt> -genome <file> -annotation <file>`
+`Manatee [OPTIONS] -i <file> -o <dir> -index <ebwt> -genome <file> -annotation <file>`
 
 <table>
 <tr><td>
