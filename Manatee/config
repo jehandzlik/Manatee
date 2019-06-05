@@ -12,6 +12,7 @@ Path to annotation file in GFF3/GTF format. File should contain non coding
 annotation.
 
 annotation=
+
 ################################################################################
 Path to reference FASTA/FA genome file.
 
