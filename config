@@ -1,0 +1,71 @@
+--------------------------------MANDATORY INPUTS--------------------------------
+
+################################################################################
+Path and basename of the genome index to be searched. The basename is the name 
+of any of the index files up to but not including the final .1.ebwt/.rev.1.ebwt
+/etc.
+
+index=/mnt/raid0/Expression/lisa/smallRNA/bowtie-indexes/shortstack/Homo_sapiens.GRCh38.dna.chromosome.1
+
+############################## ANNOTATION ######################################
+Path to annotation file in GFF3/GTF format. File should contain non coding 
+annotation.
+
+#annotation=/mnt/raid0/Expression/Simulation_RNA-Seq/Simulator/miRBase22.gtf
+annotation=/mnt/raid0/Expression/lisa/PROJECT/annotation/single_annotation.gtf
+#annotation=/mnt/raid0/Expression/Simulation_RNA-Seq/Simulator/sRNA_miRNA_GRCh38_v22.gtf
+################################################################################
+Path to reference FASTA/FA genome file.
+
+genome=/mnt/raid0/Expression/lisa/smallRNA/bowtie-indexes/shortstack/Homo_sapiens.GRCh38.dna.chromosome.1.fa
+
+------------------------------NON-MANDATORY INPUTS------------------------------
+
+################################################################################
+Path and basename of the transcriptome index to be searched. The basename is the 
+name of any of the index files up to but not including the final .1.ebwt/
+.rev.1.ebwt/etc. If left blank, spipeRNA will generate the transcriptome index 
+based on provided annotation file and will store it within the trabscripts 
+directory.
+
+t_index=
+
+################################################################################
+Maximun number of mismatches in genomic alignments (default: mismatches=1).
+
+mismatches=1
+
+################################################################################
+Number of alignment cores (default: cores=1).
+
+cores=64
+
+################################################################################
+Max of multimapping loci, -m in bowtie execution. The mapping algorithm will be 
+applied only for reads with multi-mapped loci less or equal than -m. Reads with 
+multimapped loci that exceed the m will be aligned against transcriptome 
+(default: m=50).
+
+m=50
+
+################################################################################
+Strand specific mode of the algorithm. Possible values yes/no (default: s=yes).
+
+s=yes
+
+################################################################################
+Collapse reads with the same genomic sequence. This setting reduces signifi-
+cantly the execution time. Possible values yes/no (default: collapse=yes).
+
+collapse=yes
+
+################################################################################
+Minimum number of unannotated read abundances per cluster (default: cd=5).
+
+cd=5
+
+################################################################################
+Clusters of unannotated reads will be merged if the distance between them is
+equal or less than cdi (default: cdi=50).
+
+cdi=50
