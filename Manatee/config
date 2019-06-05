@@ -5,19 +5,17 @@ Path and basename of the genome index to be searched. The basename is the name
 of any of the index files up to but not including the final .1.ebwt/.rev.1.ebwt
 /etc.
 
-index=/mnt/raid0/Expression/lisa/smallRNA/bowtie-indexes/shortstack/Homo_sapiens.GRCh38.dna.chromosome.1
+index=
 
 ############################## ANNOTATION ######################################
 Path to annotation file in GFF3/GTF format. File should contain non coding 
 annotation.
 
-#annotation=/mnt/raid0/Expression/Simulation_RNA-Seq/Simulator/miRBase22.gtf
-annotation=/mnt/raid0/Expression/lisa/PROJECT/annotation/single_annotation.gtf
-#annotation=/mnt/raid0/Expression/Simulation_RNA-Seq/Simulator/sRNA_miRNA_GRCh38_v22.gtf
+annotation=
 ################################################################################
 Path to reference FASTA/FA genome file.
 
-genome=/mnt/raid0/Expression/lisa/smallRNA/bowtie-indexes/shortstack/Homo_sapiens.GRCh38.dna.chromosome.1.fa
+genome=
 
 ------------------------------NON-MANDATORY INPUTS------------------------------
 
@@ -38,7 +36,7 @@ mismatches=1
 ################################################################################
 Number of alignment cores (default: cores=1).
 
-cores=64
+cores=1
 
 ################################################################################
 Max of multimapping loci, -m in bowtie execution. The mapping algorithm will be 
