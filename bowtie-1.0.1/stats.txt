@@ -1,8 +1,0 @@
-Warning: Could not open read file "../541/final.fastq" for reading; skipping...
-Command: ./bowtie --un=norrnatrna541.fastq indexes/rRNAmtRNA ../541/final.fastq 
-The program 'bowtie' is currently not installed. You can install it by typing:
-sudo apt-get install bowtie
-# reads processed: 44577725
-# reads with at least one reported alignment: 15832157 (35.52%)
-# reads that failed to align: 28745568 (64.48%)
-Reported 15832157 alignments to 1 output stream(s)
