@@ -23,8 +23,8 @@ genome=
 ################################################################################
 Path and basename of the transcriptome index to be searched. The basename is the 
 name of any of the index files up to but not including the final .1.ebwt/
-.rev.1.ebwt/etc. If left blank, spipeRNA will generate the transcriptome index 
-based on provided annotation file and will store it within the trabscripts 
+.rev.1.ebwt/etc. If left blank, Manatee will generate the transcriptome index 
+based on provided annotation file and will store it within the trans-index 
 directory.
 
 t_index=
