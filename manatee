@@ -74,6 +74,7 @@ my $total_aligned_reads = 0;
 
 #Global separor strings.
 my $SEPARATOR = "SePaRaToR";
+
 #Seperator for alternative transcripts.
 my $ALTERNATIVE_TRANS_SEPARATOR = " ";
 my $ALTERNATIVE_TRANS_SEPARATOR_FILE = ",";
@@ -169,43 +170,43 @@ if(defined $config_file){
   while(my $line_config=<CONFIG_FILE>){
     if($line_config !~ /^$/){
       chomp $line_config;
-      my @splitted_line = split('=',$line_config);
-      if ($splitted_line[0] eq "index"){
-	$path_to_bowtie_index = $splitted_line[1];
-      }elsif ($splitted_line[0] eq "genome"){
-	$reference_genome = $splitted_line[1];
-      }elsif ($splitted_line[0] eq "annotation"){
-	$annotation_file = $splitted_line[1];
-      }elsif ($splitted_line[0] eq "t_index" && exists $splitted_line[1]){
-	$bowtie_trans_index = $splitted_line[1];
-      }elsif ($splitted_line[0] eq "cores" && exists $splitted_line[1]){
-        $aln_cores = $splitted_line[1];
-      }elsif ($splitted_line[0] eq "m" && exists $splitted_line[1]){
-	$m = $splitted_line[1];
-      }elsif ($splitted_line[0] eq "collapse" && exists $splitted_line[1]){
-	$collapsed = $splitted_line[1];
-	if($splitted_line[1] eq "yes"){
+      my @split_line = split('=',$line_config);
+      if ($split_line[0] eq "index"){
+	$path_to_bowtie_index = $split_line[1];
+      }elsif ($split_line[0] eq "genome"){
+	$reference_genome = $split_line[1];
+      }elsif ($split_line[0] eq "annotation"){
+	$annotation_file = $split_line[1];
+      }elsif ($split_line[0] eq "t_index" && exists $split_line[1]){
+	$bowtie_trans_index = $split_line[1];
+      }elsif ($split_line[0] eq "cores" && exists $split_line[1]){
+        $aln_cores = $split_line[1];
+      }elsif ($split_line[0] eq "m" && exists $split_line[1]){
+	$m = $split_line[1];
+      }elsif ($split_line[0] eq "collapse" && exists $split_line[1]){
+	$collapsed = $split_line[1];
+	if($split_line[1] eq "yes"){
 	  $collapsed = 1;
-	}elsif($splitted_line[1] eq "no"){
+	}elsif($split_line[1] eq "no"){
 	  $collapsed = 0;
 	}else{
 	  print "\nCollapse mode should be defined either as yes or no (default -collapse yes).\n";
 	  exit;
 	}
-      }elsif ($splitted_line[0] eq "s" && exists $splitted_line[1]){
-	if($splitted_line[1] eq "yes"){
+      }elsif ($split_line[0] eq "s" && exists $split_line[1]){
+	if($split_line[1] eq "yes"){
 	  $strand_specific = 1;
-	}elsif($splitted_line[1] eq "no"){
+	}elsif($split_line[1] eq "no"){
 	  $strand_specific = 0;
 	}else{
 	  print "\nStrand specific mode should be defined either as yes or no (default -s yes).\n";
 	  exit;
 	}
       }
-      elsif ($splitted_line[0] eq "cdi" && exists $splitted_line[1]){
-	$clust_dist = $splitted_line[1];
-      }elsif ($splitted_line[0] eq "cd" && exists $splitted_line[1]){
-	$clust_dens = $splitted_line[1];
+      elsif ($split_line[0] eq "cdi" && exists $split_line[1]){
+	$clust_dist = $split_line[1];
+      }elsif ($split_line[0] eq "cd" && exists $split_line[1]){
+	$clust_dens = $split_line[1];
       }
     }
   }
@@ -447,7 +448,7 @@ sub decompress {
   }
 }
 
-#Write isomirs to output file.
+#Write isomirs to the output file.
 sub write_isomirs {
 
   if(%isomirs){
@@ -704,7 +705,7 @@ my $create_index;
 	 return;
       }
       	print STDERR "
-Building transcriptome index in transcripts directory ...
+Building transcriptome index ...
 ";
 	
       `$RealBin/bowtie-1.0.1/bowtie-build --quiet $transcripts_fasta $bowtie_trans_index`; #Build transcriptome idex with bowtie.
@@ -754,9 +755,8 @@ Building transcriptome index in transcripts directory ...
 
 	  if($first_time and $transcript_name ne '*'){ $prev_id = $read_id; $first_time = 0; }
 
-	  #print "PREV ID $prev_id READ ID $read_id\n";
 	  if($transcript_name ne '*'){
-	    #print "LINE: $line\n";
+
 	    if( $prev_id ne $read_id ){ #New transcript.
 	      #Select n transcripts with the highest alignment scores as obtained from alignment against the transcriptome.
 	      my $tmp_hash = n_best_transcripts(\%trans_aligned_reads, $prev_id);
@@ -1008,6 +1008,7 @@ sub create_info {
 
 }
 
+#Helper function for parsing info.
 sub split_info {
 
   my $info = shift;
@@ -1030,6 +1031,7 @@ sub split_info {
   
 }
 
+#Helper function for generating info.
 sub generate_info {
 
 my $line = shift;
@@ -1292,7 +1294,7 @@ sub best_fitted_transcript {
   my $tmp_best_fitted_transcript = "";
   my $existing_best_fitted_transcript;
   my $ratio;
-  my $min_ratio = 3000000000;
+  my $min_ratio = 1000000000;
   my $mirna_flag = 0;
   my $test_flag = 0;
   #Check whether any of the alignments is associated with miRNA annotation.
@@ -1702,7 +1704,7 @@ manatee [options] -i <file> -o <dir> -index <ebwt> -genome <file> -annotation <f
 -genome <file>       : Path to genome fa or fasta file. 
 	
 -annotation <file>   : Path to annotation file in GFF3/GTF format. File should contain 
-		       non coding annotation. 
+		       non-coding annotation. 
 	
 OPTIONS
    
@@ -1747,9 +1749,9 @@ sub print_user_input {
   print "Reference genome file: $reference_genome\n\n";
   if($bowtie_trans_index eq $NOT_SPECIFIED){
     if(check_index($bowtie_trans_index) eq $NOT_SPECIFIED){
-      print "Transcriptome index: not specified, index will be generated based on provided annotation.\n\n";
+      print "Transcriptome index: not specifie. Index will be generated based on provided annotation.\n\n";
     }else{
-      print "Transcriptome index: not specified, index related to provided annotation file already exists in trans-index directory.\n\n";
+      print "Transcriptome index: not specified. Index related to provided annotation file already exists in trans-index directory.\n\n";
     }
   }else{
       print "Transcriptome index: $bowtie_trans_index\n\n";
