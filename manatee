@@ -231,8 +231,8 @@ Add non coding annotation and rerun.\n\n";
 if(check_index($bowtie_trans_index) eq 0){
 	  print "\n
 FATAL: Incorrect transcriptome index files. Check your transcriptome index files and rerun.
-You could leave this parameter empty, and transcriptome index will be generated based on provided 
-annotation file and placed in the transcripts directory.\n\n";
+If parameter t_index is left blank, the transcriptome index will be generated based on provided 
+annotation file and placed in the trans-index directory.\n\n";
 	  exit;
 }
 
@@ -653,6 +653,11 @@ my $create_index;
     my $bowtie_trans_index = check_index($bowtie_trans_index);
     if($bowtie_trans_index eq $NOT_SPECIFIED){ #Creating transcriptome index file inside the transcripts directory.
 	my @path = split('/',$annotation_file);
+	
+	if(!-e $RealBin.$slash.$bowtie_trans_index_dir){ #Create directory trans-index
+	  mkdir $RealBin.$slash.$bowtie_trans_index_dir; 
+	}	
+
 	my $transcripts_fasta = $RealBin.$slash.$bowtie_trans_index_dir.$slash.$path[$#path].'.fa';
 	
 	$bowtie_trans_index = $RealBin.$slash.$bowtie_trans_index_dir.$slash.$path[$#path];
@@ -953,7 +958,6 @@ sub store_transcripts {
 	    my $i=0;
 	    my $j=0;
 	    my $alt_trans_count;
-	    
 
 	  if($collapsed){ #If collapse reads setting is activated.
 	    
@@ -1043,6 +1047,11 @@ my @sam_elements = split('\t', $line);
 	  $strand = $NA;
 	}
 	my $chromosome = $sam_elements[2];
+
+	if($chromosome =~ /[Cc]hr/){
+	  $chromosome = substr($chromosome,3);
+	}
+
 	my $start_pos = $sam_elements[3];
 	my $read_length = length($sam_elements[9]);
 	my $stop_pos = $start_pos + $read_length -1;
@@ -1788,9 +1797,8 @@ sub check_index {
 	  -s $path.'.rev.2.ebwt'){ #If defined bowtie genome index exists.
 	    return $path;
 	}else{
-	    print "\nThe provided transcriptome index does not exist.
-Please provide the correct index or let it blank 
-so Manatee will create the it for you. \n\n";
+	    print "\nThe provided transcriptome index does not exist or is incorrect.
+If the parameter t_index is left blank, Manatee will create the transcriptome index based on the provided annotation. \n\n";
 	    exit;
 	}
       }
@@ -1979,6 +1987,7 @@ sub write_expressions {
   my $i = 0;
   
   foreach my $transcript (sort keys %transcripts){  
+  #print "TRRRRR: $transcript\n";
     my @arr1 = split($ALTERNATIVE_TRANS_SEPARATOR, $transcript);
     my @arr2 = split($SEPARATOR, $arr1[0]);
     my $chromosome = $arr2[0];
@@ -2069,6 +2078,7 @@ sub write_expressions {
       my $rpm = $common{$first_transcript}{$keep_trans}{'rpm'};
       my $unique = $common{$first_transcript}{$keep_trans}{'unique'};
       my $biotype = $common{$first_transcript}{$keep_trans}{'biotype'};
+      
       print $TRANSCRIPTS_COUNTS "$first_transcript\t$biotype\t";
       print $TRANSCRIPTS_COUNTS "$sum\t$rpm\t$unique\t$keep_trans\n";
       
