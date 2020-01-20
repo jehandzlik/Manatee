@@ -148,19 +148,7 @@ Number of alignment cores (default: -cores 1).
 
 </td><td>
 
-Collapse reads with the same genomic sequences. This setting reduces significantly the execution time. Possible values ues/no (default: -collapse yes).
-
-
-</td></tr><tr><td>
-
-    -m <int>
-
-</td><td>
-
-Max of multimapping loci, -m in bowtie execution. The mapping algorithm will be 
-applied only for reads with multi-mapped loci less or equal than -m. Reads with 
-multimapped loci that exceed the m will be aligned against transcriptome 
-(default: m=50).
+Collapse reads with the same genomic sequences. This setting reduces significantly the execution time. Possible values yes/no (default: -collapse yes).
 
 
 </td></tr><tr><td>
@@ -177,7 +165,7 @@ Maximun number of mismatches in genomic alignments (default: mismatches=1).
 
 </td><td>
 
-Max of multimapping loci, -m in bowtie execution. The mapping algorithm will be applied only for reads with multi-mapped loci less or equal than m. Reads with multimapped loci that exceed the -m will be aligned against transcriptome (default: -m 200).
+Max of multimapping loci, -m in bowtie execution. The mapping algorithm will be applied only for reads with multi-mapped loci less or equal than m. Reads with multimapped loci that exceed the -m will be aligned against transcriptome (default: -m 50).
 
 </td></tr><tr><td>
 
@@ -185,7 +173,7 @@ Max of multimapping loci, -m in bowtie execution. The mapping algorithm will be 
 
 </td><td>
 
-Strand specific mode of the algorithm (default -strand_mode yes).
+Strand specific mode of the algorithm (default -s yes).
 
 </td></tr><tr><td>
 
