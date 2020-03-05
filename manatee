@@ -1,15 +1,14 @@
 #!/usr/bin/perl -w
 use strict;
 use warnings;
-use 5.010; #Use perl 5.10 or newer.
 
 use FindBin qw( $RealBin );
-
 
 my @modules = qw(
     Getopt::Long
     Set::IntervalTree
 );
+
 
 #Check required perl modules installations.
 for(@modules) {
@@ -19,8 +18,6 @@ for(@modules) {
         exit;
     }
 }
-
-##Program variables##
 
 #Software version.
 my $version = '1.0';
@@ -323,7 +320,7 @@ my %gtf;
 my $annotation = Set::IntervalTree->new;
 
 #Process and store annotation to hash.
-process_annotation($annotation_file,\%transcript_name,\$annotation,\%gtf);
+process_annotation($annotation_file);
 
 #Define condensed reads hash, utilized for time optimization.
 my %collapsed_reads = ();
@@ -333,14 +330,14 @@ my $input_base_name;
 my $input_path;
 
 #Extract the path and base name of the input file.
-get_input_filename_base_path($input_file, \$input_base_name, \$input_path);
+get_input_filename_base_path($input_file);
 
 #Input reads will be condensed, optimizing both execution time and available memory usage.
 my $collapsed_input = $output_path.$input_base_name."_condensed.fasta"; 
 
 #Process input fasta or fa file. Condensed reads creation, length of input file reduced. 
 if($collapsed){ 
-  process_input($input_file,$collapsed_input,\%collapsed_reads,\%read_tags);
+  process_input($input_file,$collapsed_input);
   $input_file = $collapsed_input;
 }
 
@@ -385,10 +382,10 @@ my %isomirs;
 my $isomir_counter = 0;
 
 #Process mapped reads and create temp file with aligned reads and their counts.
-reads_process($bowtie_output, \$uniquely_aligned_tree, \$uniquely_aligned_count, \%densities, \%transcripts);
+reads_process($bowtie_output);
 
 #Quantify reads.
-quantify(\%transcripts);
+quantify();
 
 #Tmp file for alignment against transcriptome.
 my $trans_unaligned_0 = $output_path.$input_base_name.'_Manate_transcriptome_unaligned_0.fa';
@@ -454,8 +451,8 @@ sub write_isomirs {
   if(%isomirs){
     open(my $fp, ">", $isomirs_file);
     print $fp "Transcript Name\tCount\tRPM\tSequence\n";
-    foreach my $trans_name (sort keys %isomirs){
-      foreach my $sequence (keys $isomirs{$trans_name}){
+    foreach my $trans_name (sort keys %{isomirs}){
+      foreach my $sequence (keys %{$isomirs{$trans_name}}){
 	
 	  my $rpm = ($isomirs{$trans_name}{$sequence}*(10^6))/($mapped_reads);
 	  print $fp "$trans_name\t$isomirs{$trans_name}{$sequence}\t$rpm\t$sequence\t\n";
@@ -512,7 +509,7 @@ sub unannotated_clusters {
   my $strand;
   
   #Create uar densities.
-  foreach my $read_id (keys %no_indication_tag){
+  foreach my $read_id (keys %{no_indication_tag}){
     
     if( $no_indication_tag{$read_id}{'counter'} eq 1 ){
       
@@ -552,13 +549,13 @@ sub unannotated_clusters {
   my $flag;
   my $rpc;
 
-  foreach $chr (sort keys %dens){
-    foreach $strand (sort keys $dens{$chr}){
+  foreach $chr (sort keys %{dens}){
+    foreach $strand (sort keys %{$dens{$chr}}){
       my $new_cluster = 1;
       $counter = 0;
       $reads_per_cluster = 0;
       $flag = 0;
-      foreach my $nc (sort {$a <=> $b} keys $dens{$chr}{$strand}){
+      foreach my $nc (sort {$a <=> $b} keys %{$dens{$chr}{$strand}}){
 
         if( $flag and abs($prev_nc-$nc) > 1 and abs($prev_nc-$nc) <= $clust_dist ){
 	  $subclusters{$counter} = $reads_per_cluster;
@@ -570,7 +567,7 @@ sub unannotated_clusters {
 	
 	  $rpc = 0;
 	  
-	  foreach my $counter (keys %subclusters){
+	  foreach my $counter (keys %{subclusters}){
 	    $rpc = $rpc + $subclusters{$counter};
 	  }
 
@@ -605,9 +602,9 @@ sub unannotated_clusters {
     }
   }
   #Store the last cluster to the hash.
-  if(%subclusters){
+  if(%{subclusters}){
   
-    foreach my $counter (keys %subclusters){
+    foreach my $counter (keys %{subclusters}){
       $rpc = $rpc + $subclusters{$counter};
     }
     
@@ -625,10 +622,10 @@ sub unannotated_clusters {
   foreach my $chr (sort {
     my @aa = $a =~ /^([A-Za-z]*)(\d*)/;
     my @bb = $b =~ /^([A-Za-z]*)(\d*)/;
-    lc $aa[0] cmp lc $bb[0] or $aa[1] <=> $bb[1]; } keys %uar_clusters){
-    foreach my $strand (sort keys $uar_clusters{$chr}){
-      foreach my $cluster_start (sort {$a <=> $b} keys $uar_clusters{$chr}{$strand}) {
-	foreach my $cluster_stop (sort {$a <=> $b} keys $uar_clusters{$chr}{$strand}{$cluster_start}) {
+    lc $aa[0] cmp lc $bb[0] or $aa[1] <=> $bb[1]; } keys %{uar_clusters}){
+    foreach my $strand (sort keys %{$uar_clusters{$chr}}){
+      foreach my $cluster_start (sort {$a <=> $b} keys %{$uar_clusters{$chr}{$strand}}) {
+	foreach my $cluster_stop (sort {$a <=> $b} keys %{$uar_clusters{$chr}{$strand}{$cluster_start}}) {
 	  if($uar_clusters{$chr}{$strand}{$cluster_start}{$cluster_stop} >= $clust_dens){
 	    my $cluster_length = $cluster_stop - $cluster_start + 1;
 	    print $cl "$chr\t$strand\t$cluster_start\t$cluster_stop\t$cluster_length\t$uar_clusters{$chr}{$strand}{$cluster_start}{$cluster_stop}\n";
@@ -666,11 +663,11 @@ my $create_index;
 	my $start_loci;
 	my $stop_loci;
 	  
-	foreach my $chromosome (keys %gtf){
+	foreach my $chromosome (keys %{gtf}){
 	
-	foreach my $strand (keys $gtf{$chromosome}){
-	  foreach my $start (keys $gtf{$chromosome}{$strand}){
-	    foreach my $stop (keys $gtf{$chromosome}{$strand}{$start}){
+	foreach my $strand (keys %{$gtf{$chromosome}}){
+	  foreach my $start (keys %{$gtf{$chromosome}{$strand}}){
+	    foreach my $stop (keys %{$gtf{$chromosome}{$strand}{$start}}){
 	      my @elements = split($SEPARATOR,$gtf{$chromosome}{$strand}{$start}{$stop});
 	      $transcripts_temp{$elements[2]} = $gtf{$chromosome}{$strand}{$start}{$stop}; 
 	      $start_loci = $start;
@@ -781,17 +778,17 @@ Building transcriptome index ...
 #All transcripts with the same score are considered as 1 out of n.
 sub n_best_transcripts {
 
-my $trans_aligned_reads = shift;
-my $read_id = shift;
+my %trans_aligned_reads = %{$_[0]};
+my $read_id = $_[1];
 my %tmp_hash;
 my $count = 0;
 my $first = 1;
 my $prev_alignment_score;
       
-   foreach my $alignment_score (sort {$a <=> $b} keys %{$trans_aligned_reads}){
-    foreach my $transcript_name (sort keys $$trans_aligned_reads{$alignment_score}){  
+   foreach my $alignment_score (sort {$a <=> $b} keys %{trans_aligned_reads}){
+    foreach my $transcript_name (sort keys %{$trans_aligned_reads{$alignment_score}}){  
       
-	my $transcript_info = $$trans_aligned_reads{$alignment_score}{$transcript_name};
+	my $transcript_info = $trans_aligned_reads{$alignment_score}{$transcript_name};
 	#Select n transcripts with the highest score as obtained from the aligner.
 	$transcript_name =~ s/^\s+|\s+$//g;
 	if($first){ $prev_alignment_score = $alignment_score; $first = 0; $count++; }
@@ -812,20 +809,20 @@ my $prev_alignment_score;
 #Store n best transcripts for selected reads in a proper global structure.
 sub store_transcript {
 
-  my $tmp_hash = shift;
-  my $read_id = shift;
-  my $sequence = shift;
+  my %tmp_hash = %{$_[0]};
+  my $read_id = $_[1];
+  my $sequence = $_[2];
 
   #Check for existing transcripts and the assigned to them counts.
-  foreach my $score ( sort {$a <=> $b} keys %{$tmp_hash} ){
-    foreach my $transcript_name (keys $$tmp_hash{$score}){
+  foreach my $score ( sort {$a <=> $b} keys %{tmp_hash} ){
+    foreach my $transcript_name (keys %{$tmp_hash{$score}}){
       my $key = $transcript_name{$transcript_name};
  
-      my $info = $$tmp_hash{$score}{$transcript_name};
+      my $info = $tmp_hash{$score}{$transcript_name};
       $info =~ s/^\s+|\s+$//g;
 	#Check whether a specific transcript was already included in previous steps.
 	if(exists $transcripts{$key}){ 
-	  foreach my $type (keys $transcripts{$key}){
+	  foreach my $type (keys %{$transcripts{$key}}){
 	    #Checking for assigned transcript counts.
 	    $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score} += $transcripts{$key}{$type};	   
 	  }
@@ -851,10 +848,10 @@ sub store_transcripts {
     my $min_align_score = 1000000;
     my $existing_trans_count_counter = 0;
     my $trans_flag = 0;
-    foreach my $sequence (sort keys $transcripts_transcriptome{$read_id}){
-      foreach my $key (sort keys $transcripts_transcriptome{$read_id}{$sequence}){
-	foreach my $info (keys $transcripts_transcriptome{$read_id}{$sequence}{$key}){	
-	  foreach my $score (keys $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}){	
+    foreach my $sequence (sort keys %{$transcripts_transcriptome{$read_id}}){
+      foreach my $key (sort keys %{$transcripts_transcriptome{$read_id}{$sequence}}){
+	foreach my $info (keys %{$transcripts_transcriptome{$read_id}{$sequence}{$key}}){	
+	  foreach my $score (keys %{$transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}}){	
 	  $sum += $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score};	  
 	  $tmp{$read_id}{$sequence}{$key}{$info} = $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score};
 	  if($min_align_score >= $score){#If miRNA is present among the transcripts from alignment, the final transcript
@@ -886,14 +883,14 @@ sub store_transcripts {
     my $glob_info;
     FOO: {	
     foreach my $trans_count (sort {$b <=> $a} keys %tmp_tmp){
-      foreach my $score (keys $tmp_tmp{$trans_count}){
-	foreach my $read_id (keys $tmp_tmp{$trans_count}{$score}){
+      foreach my $score (keys %{$tmp_tmp{$trans_count}}){
+	foreach my $read_id (keys %{$tmp_tmp{$trans_count}{$score}}){
 
-	      foreach my $key (sort keys $tmp_tmp{$trans_count}{$score}{$read_id}){
+	      foreach my $key (sort keys %{$tmp_tmp{$trans_count}{$score}{$read_id}}){
 	      
-		 foreach my $info (keys $tmp_tmp{$trans_count}{$score}{$read_id}{$key}) {
+		 foreach my $info (keys %{$tmp_tmp{$trans_count}{$score}{$read_id}{$key}}) {
 		 
-		  foreach my $sequence (keys $tmp_tmp{$trans_count}{$score}{$read_id}{$key}{$info}){
+		  foreach my $sequence (keys %{$tmp_tmp{$trans_count}{$score}{$read_id}{$key}{$info}}){
 		
 		      $glob_seq = $sequence;
 		      $glob_info = $info;
@@ -950,9 +947,9 @@ sub store_transcripts {
     }
 
     foreach my $read_id (keys %a){    
-	foreach my $key (sort keys $a{$read_id}){
-	  foreach my $info (keys $a{$read_id}{$key}){
-	  foreach my $sequence (sort keys $a{$read_id}{$key}{$info}){
+	foreach my $key (sort keys %{$a{$read_id}}){
+	  foreach my $info (keys %{$a{$read_id}{$key}}){
+	  foreach my $sequence (sort keys %{$a{$read_id}{$key}{$info}}){
 	    my @trans_key;
 	    my @trans_info;
 	    my $i=0;
@@ -1089,8 +1086,6 @@ sub file_format {
 #Quantify reads.
 sub quantify {
 
-my $transcripts = shift;
-
 open(my $TMP_SAM, "<", $tmp_sam);
 
 my $prev_ead_id = '';
@@ -1117,6 +1112,7 @@ while(my $line = <$TMP_SAM>){
     $counter++;  
   }
   
+  #Tmp hash for a multimapped read.
   my %multimaps;
   
   if($counter eq $multimap){ #Reached all the multimapping regions for one read.
@@ -1127,10 +1123,10 @@ while(my $line = <$TMP_SAM>){
     my $uniques_flag;
     my $annotation_flag;
     
-    foreach my $chromosome (keys %tmp_hash){
-      foreach my $strand (keys $tmp_hash{$chromosome}){
-	foreach my $start_pos (keys $tmp_hash{$chromosome}{$strand}){
-	  foreach my $stop_pos (keys $tmp_hash{$chromosome}{$strand}{$start_pos}){
+    foreach my $chromosome (keys %{tmp_hash}){
+      foreach my $strand (keys %{$tmp_hash{$chromosome}}){
+	foreach my $start_pos (keys %{$tmp_hash{$chromosome}{$strand}}){
+	  foreach my $stop_pos (keys %{$tmp_hash{$chromosome}{$strand}{$start_pos}}){
 	  
 	    if(!exists $score{$tmp_hash{$chromosome}{$strand}{$start_pos}{$stop_pos}}){
 	      $score{$tmp_hash{$chromosome}{$strand}{$start_pos}{$stop_pos}} = 0;
@@ -1143,7 +1139,7 @@ while(my $line = <$TMP_SAM>){
 	    for (my $i = $start_pos - $multimap_range; $i <= $start_pos + $read_length + $multimap_range - 1; $i++){
 
 	      my $key = $chromosome . $SEPARATOR . $strand . $SEPARATOR . $i;
-	      if(exists $densities{$key}){
+	      if(exists $densities{$key}){ #Assign score to multimap read based on UAR densities.
 	        $indication = 1;
 	        $uniques_flag = 1;
 		if($i >= $start_pos and $i <= $stop_pos){
@@ -1157,6 +1153,7 @@ while(my $line = <$TMP_SAM>){
 	      }
 	    }
 
+	    #Fetch annotation for a multimap.
 	    my $results = $annotation->fetch($start_pos, $stop_pos);
 	    my %annotation_tmp;
 	    $annotation_flag = 0;
@@ -1186,10 +1183,10 @@ while(my $line = <$TMP_SAM>){
       %score = ();
     }
     if($indication eq 0){ #No unique reads or annotation was found for those multimaps.
-     foreach my $chromosome (keys %tmp_hash){
-      foreach my $strand (keys $tmp_hash{$chromosome}){
-	foreach my $start_pos (keys $tmp_hash{$chromosome}{$strand}){
-	  foreach my $stop_pos (keys $tmp_hash{$chromosome}{$strand}{$start_pos}){
+     foreach my $chromosome (keys %{tmp_hash}){
+      foreach my $strand (keys %{$tmp_hash{$chromosome}}){
+	foreach my $start_pos (keys %{$tmp_hash{$chromosome}{$strand}}){
+	  foreach my $stop_pos (keys %{$tmp_hash{$chromosome}{$strand}{$start_pos}}){
 		my $info = $tmp_hash{$chromosome}{$strand}{$start_pos}{$stop_pos};
 		print $NO_INDICATION_FILE "$read_id$SEPARATOR$info$SEPARATOR$multimap\n";
 	  }
@@ -1201,17 +1198,205 @@ while(my $line = <$TMP_SAM>){
     %score = ();
     $counter = 0;
     $tot_reads++;
-    assign(\%multimaps, \%transcripts, \%densities, $read_id);
+    assign(\%multimaps, $read_id);
     %multimaps = ();
   }  
 }
 
 }
 
+#Main function for assignment of transcript counts in the designated structure.
+sub assign {
+
+   my %multimaps = %{$_[0]};
+   my $read_id = $_[1];
+   my $score_sum = 0;
+   my $no_annotation_sum = 0;
+   my %tmp;
+   my $annotation_unique = 0;
+   my $unique = 0;
+   my $annotation = 0;
+   
+   my %sam;
+     
+   foreach my $key (keys %{multimaps}){
+    if($multimaps{$key}{'score'} ne 0 and $multimaps{$key}{'annotation'} ne $no_annotation_flag){ #Region/regions with both annotation and uniques.
+      $annotation_unique++;
+    } 
+     if($multimaps{$key}{'score'} ne 0 and $multimaps{$key}{'annotation'} eq $no_annotation_flag){ #Region/regions with only uniques.
+      $unique++;
+     }
+    if($multimaps{$key}{'score'} eq 0 and $multimaps{$key}{'annotation'} ne $no_annotation_flag){ #Region/regions with only annotation.
+      $annotation++;
+    }
+   }
+
+   my $max_score = 0;
+   my $max_score_key;
+   if($unique > 0 and $annotation_unique eq 0 and $annotation eq 0){ #Multimappeed
+	foreach my $key (keys %{multimaps}){
+	  foreach my $type (keys %{$multimaps{$key}}){
+ 	    if($type eq 'score'){	    
+ 	    	if($multimaps{$key}{'score'} >= $max_score ){
+		  $max_score_key = $key;
+		  $max_score = $multimaps{$key}{'score'};
+ 	    	}   
+ 	    }
+	  }
+	}
+   }
+    my $sum_score = 0;
+    if($annotation_unique eq 1){ #Unique annotation and UARs.
+   
+      foreach my $key (keys %{multimaps}){
+     
+        # Select only the combination with annotation and UARs.
+	if( ( $multimaps{$key}{'annotation'} ne $no_annotation_flag ) and ($multimaps{$key}{'score'} ne 0) ){
+	    if($collapsed){
+	      $transcripts{$multimaps{$key}{'annotation'}}{$non_unique_type} += $read_tags{$read_id};
+	      detect_isomir($multimaps{$key}{'annotation'}, $key, $read_tags{$read_id});
+	    }else{
+	      $transcripts{$multimaps{$key}{'annotation'}}{$non_unique_type}++;
+	      detect_isomir($multimaps{$key}{'annotation'}, $key, 1);
+	    }
+	}
+      }
+    }elsif($annotation_unique >= 1){ #Case where both annotation and unique reads are present for multiple multimapping regions.
+       my $sum_score_count = 0;
+       foreach my $key (keys %{multimaps}){
+     
+	if( ( $multimaps{$key}{'annotation'} ne $no_annotation_flag ) and ($multimaps{$key}{'score'} ne 0) ){
+	  $sum_score += $multimaps{$key}{'score'};
+	  $sum_score_count++;
+	}
+	
+       }
+       
+       foreach my $key (keys %{multimaps}){ 
+        if( ( $multimaps{$key}{'annotation'} ne $no_annotation_flag ) and ($multimaps{$key}{'score'} ne 0) ){
+	    if($collapsed){
+	      $transcripts{$multimaps{$key}{'annotation'}}{$non_unique_type} += $read_tags{$read_id}*($multimaps{$key}{'score'}/$sum_score); #Divide th
+	      detect_isomir($multimaps{$key}{'annotation'}, $key, $read_tags{$read_id}*($multimaps{$key}{'score'}/$sum_score));
+	   }else{
+	      $transcripts{$multimaps{$key}{'annotation'}}{$non_unique_type} += ($multimaps{$key}{'score'}/$sum_score); #Divide the
+	      detect_isomir($multimaps{$key}{'annotation'}, $key, $multimaps{$key}{'score'}/$sum_score);
+	    }	    
+	}
+       }
+    }elsif($unique and $annotation){ #Prefer annotation instead of unique in case they do not match.
+       my %annotation_tmp;
+       my $mirna_flag = 0;
+       my %tmp_hash;
+       foreach my $key (keys %{multimaps}){
+       
+        if($multimaps{$key}{'annotation'} ne $no_annotation_flag){
+	  my @tmp_arr1 = split($SEPARATOR, $key);
+	  my $start_pos = $tmp_arr1[2];
+	  my $stop_pos = $tmp_arr1[3];
+	  my $read_length = $stop_pos - $start_pos + 1;
+	  $annotation_tmp{$start_pos}{$stop_pos}{$read_length}{$multimaps{$key}{'annotation'}} = $multimaps{$key}{'annotation'}; 
+	  my @tmp_arr2 = split($SEPARATOR, $multimaps{$key}{'annotation'});
+	  $tmp_hash{$tmp_arr2[4]} = $key;
+	}
+       }
+       
+       my $best_fitted_transcript = best_fitted_transcript(\%annotation_tmp);
+       my @bft = split($ALTERNATIVE_TRANS_SEPARATOR, $best_fitted_transcript);
+       my @first_annotation = split($SEPARATOR, $bft[0]);
+       
+       my $annotation_mirna;
+       my $key_mirna; 
+       foreach my $key (keys %{multimaps}){
+        if($multimaps{$key}{'annotation'} ne $no_annotation_flag){
+	    if($multimaps{$key}{'annotation'} =~ /miRNA/ and $multimaps{$key}{'annotation'} eq $best_fitted_transcript){
+	      $mirna_flag = 1;
+	      $annotation_mirna = $multimaps{$key}{'annotation'};
+	      $key_mirna = $key;
+	      last;
+	    }
+	}
+       }
+	if($collapsed){
+	  $transcripts{$best_fitted_transcript}{$non_unique_type} += $read_tags{$read_id};
+	  if($mirna_flag){
+	    detect_isomir($annotation_mirna, $key_mirna, $read_tags{$read_id});
+	  }
+	  
+	}else{
+	  $transcripts{$best_fitted_transcript}{$non_unique_type}++;
+	  if($mirna_flag){
+	    detect_isomir($annotation_mirna, $key_mirna, 1);
+	  }
+	}
+    }
+    elsif(!$unique and $annotation){ #Only annotation available.
+    
+       my $mirna_flag = 0;
+       my %annotation_tmp;
+       
+       my %hash;
+       
+       my %tmp_hash;
+       
+       foreach my $key (keys %{multimaps}){
+
+        my @tmp_arr1 = split($SEPARATOR, $key);
+        my $start_pos = $tmp_arr1[2];
+        my $stop_pos = $tmp_arr1[3];
+        my $read_length = $stop_pos - $start_pos + 1;
+
+	$annotation_tmp{$start_pos}{$stop_pos}{$read_length}{$multimaps{$key}{'annotation'}} = $multimaps{$key}{'annotation'};
+	$hash{$multimaps{$key}{'annotation'}} = $key;
+	
+	my @tmp_arr2 = split($SEPARATOR, $multimaps{$key}{'annotation'});
+	if($multimaps{$key}{'annotation'} ne $no_annotation_flag){
+	  $tmp_hash{$tmp_arr2[4]} = $key;
+	}
+	
+       }
+             
+       my $best_fitted_transcript = best_fitted_transcript(\%annotation_tmp);
+       my @bft = split($ALTERNATIVE_TRANS_SEPARATOR, $best_fitted_transcript);
+       my @first_annotation = split($SEPARATOR, $bft[0]);
+       
+       my $annotation_mirna;
+       my $key_mirna; 
+       foreach my $key (keys %{multimaps}){
+        if($multimaps{$key}{'annotation'} ne $no_annotation_flag){
+	    if($multimaps{$key}{'annotation'} =~ /miRNA/ and $multimaps{$key}{'annotation'} eq $best_fitted_transcript){
+	      $mirna_flag = 1;
+	      $annotation_mirna = $multimaps{$key}{'annotation'};
+	      $key_mirna = $key;
+	      last;
+	    }
+	}
+       }
+	if($collapsed){
+	  if(exists $transcripts{$best_fitted_transcript}){
+	    $transcripts{$best_fitted_transcript}{$non_unique_type} += $read_tags{$read_id};
+	  }else{
+	    $transcripts{$best_fitted_transcript}{$non_unique_type} = $read_tags{$read_id};
+	  }
+	 if($mirna_flag){
+	    detect_isomir($annotation_mirna, $key_mirna, $read_tags{$read_id});
+	  }
+	}else{	
+	  if(exists $transcripts{$best_fitted_transcript}){
+	    $transcripts{$best_fitted_transcript}{$non_unique_type} = 1;
+	  }else{
+	    $transcripts{$best_fitted_transcript}{$non_unique_type}++;
+	  }
+	 if($mirna_flag){
+	    detect_isomir($annotation_mirna, $key_mirna, 1);
+	  }
+	}
+    }
+}
+
 #Process mapped reads and create temp file with aligned reads and their counts.
 sub reads_process {
 
-my($SAM_FILE,$uniquely_aligned_tree, $uniquely_aligned_count, $densities, $transcripts) = @_;
+my $SAM_FILE = shift;
 
 my %read_counts; 
 my $strand;
@@ -1249,11 +1434,11 @@ my $prev_line;
 	      my $mltp = keys %tmp;
 
 	      if($mltp eq 1){
-		$$uniquely_aligned_count++;
-		densities_and_transcripts(\$densities, \%tmp, \%transcripts);
+		$uniquely_aligned_count++;
+		densities_and_transcripts(\%tmp);
 	      }else{
 	        #Write multimaps into temp file 
-	        #in Manatee like format.
+	        #in Manate format.
 		foreach my $info (keys %tmp){
 		  print $TMP_SAM "$info$SEPARATOR$mltp\n";
 		}
@@ -1272,8 +1457,8 @@ my $prev_line;
   }
   my $mltp = keys %tmp;
   if($mltp eq 1){ #The last line of the input file.
-    densities_and_transcripts(\$densities, \%tmp, \%transcripts);
-    $$uniquely_aligned_count++;
+    densities_and_transcripts(\%tmp);
+    $uniquely_aligned_count++;
   }else{
     foreach my $info (keys %tmp){
       print $TMP_SAM "$info$SEPARATOR$mltp\n";
@@ -1288,7 +1473,7 @@ my $prev_line;
 #Apply the relation for best fitted transcript.
 sub best_fitted_transcript {
 
-  my $tmp = shift;
+  my %tmp = %{$_[0]};
 
   my $best_fitted_transcript = "";
   my $tmp_best_fitted_transcript = "";
@@ -1298,10 +1483,10 @@ sub best_fitted_transcript {
   my $mirna_flag = 0;
   my $test_flag = 0;
   #Check whether any of the alignments is associated with miRNA annotation.
-   foreach my $start_pos (sort {$a <=> $b} keys %{$tmp}){
-    foreach my $stop_pos (sort {$a <=> $b} keys $$tmp{$start_pos}){
-      foreach my $read_length (sort {$a <=> $b} keys $$tmp{$start_pos}{$stop_pos}){
-	foreach my $annotation (sort keys $$tmp{$start_pos}{$stop_pos}{$read_length}){
+   foreach my $start_pos (sort {$a <=> $b} keys %{tmp}){
+    foreach my $stop_pos (sort {$a <=> $b} keys %{$tmp{$start_pos}}){
+      foreach my $read_length (sort {$a <=> $b} keys %{$tmp{$start_pos}{$stop_pos}}){
+	foreach my $annotation (sort keys %{$tmp{$start_pos}{$stop_pos}{$read_length}}){
 	  if($annotation ne $no_annotation_flag){
 	    if($annotation =~ /miRNA/){
 	      $mirna_flag = 1;
@@ -1312,10 +1497,10 @@ sub best_fitted_transcript {
     }
    }
 
-  foreach my $start_pos (sort {$a <=> $b} keys %{$tmp}){
-    foreach my $stop_pos (sort {$a <=> $b} keys $$tmp{$start_pos}){
-      foreach my $read_length (sort {$a <=> $b} keys $$tmp{$start_pos}{$stop_pos}){
-	foreach my $annotation (sort keys $$tmp{$start_pos}{$stop_pos}{$read_length}){
+  foreach my $start_pos (sort {$a <=> $b} keys %{tmp}){
+    foreach my $stop_pos (sort {$a <=> $b} keys %{$tmp{$start_pos}}){
+      foreach my $read_length (sort {$a <=> $b} keys %{$tmp{$start_pos}{$stop_pos}}){
+	foreach my $annotation (sort keys %{$tmp{$start_pos}{$stop_pos}{$read_length}}){
 	  if($annotation ne $no_annotation_flag){
 	    if($mirna_flag){
 	      my @arrays;
@@ -1373,197 +1558,12 @@ sub detect_isomir {
   }
 }
 
-#Main function for assignment of transcript counts in the designated structure.
-sub assign {
-
-   my $multimaps = shift;
-   my $transcripts = shift;
-   my $densities = shift;
-   my $read_id = shift;
-   my $score_sum = 0;
-   my $no_annotation_sum = 0;
-   my %tmp;
-   my $annotation_unique = 0;
-   my $unique = 0;
-   my $annotation = 0;
-   
-   my %sam;
-   
-   foreach my $key (keys %{$multimaps}){
-
-    if($$multimaps{$key}{'score'} ne 0 and $$multimaps{$key}{'annotation'} ne $no_annotation_flag){ #Region/regions with both annotation and uniques.
-      $annotation_unique++;
-    } 
-     if($$multimaps{$key}{'score'} ne 0 and $$multimaps{$key}{'annotation'} eq $no_annotation_flag){ #Region/regions with only uniques.
-      $unique++;
-     }
-    if($$multimaps{$key}{'score'} eq 0 and $$multimaps{$key}{'annotation'} ne $no_annotation_flag){ #Region/regions with only annotation.
-      $annotation++;
-    }
-   }
-
-   my $max_score = 0;
-   my $max_score_key;
-   if($unique > 0 and $annotation_unique eq 0 and $annotation eq 0){ #Multimappeed r
-	foreach my $key (keys %{$multimaps}){
-	  foreach my $type (keys $$multimaps{$key}){
- 	    if($type eq 'score'){
- 	    
- 	    	if($$multimaps{$key}{'score'} >= $max_score ){
-		  $max_score_key = $key;
-		  $max_score = $$multimaps{$key}{'score'};
- 	    	}   
- 	    }
-	  }
-	}
-   }
-    my $sum_score = 0;
-    if($annotation_unique eq 1){ #Unique annotation and UARs.
-   
-      foreach my $key (keys %{$multimaps}){
-     
-        # Select only the combination with annotation and UARs.
-	if( ( $$multimaps{$key}{'annotation'} ne $no_annotation_flag ) and ($$multimaps{$key}{'score'} ne 0) ){
-	    if($collapsed){
-	      $$transcripts{$$multimaps{$key}{'annotation'}}{$non_unique_type} += $read_tags{$read_id};
-	      detect_isomir($$multimaps{$key}{'annotation'}, $key, $read_tags{$read_id});
-	    }else{
-	      $$transcripts{$$multimaps{$key}{'annotation'}}{$non_unique_type}++;
-	      detect_isomir($$multimaps{$key}{'annotation'}, $key, 1);
-	    }
-	}
-      }
-    }elsif($annotation_unique >= 1){ #Case where both annotation and unique reads are present and there is more than one such region.
-       my $sum_score_count = 0;
-       foreach my $key (keys %{$multimaps}){
-     
-	if( ( $$multimaps{$key}{'annotation'} ne $no_annotation_flag ) and ($$multimaps{$key}{'score'} ne 0) ){
-	  $sum_score += $$multimaps{$key}{'score'};
-	  $sum_score_count++;
-	}
-	
-       }
-       
-       foreach my $key (keys %{$multimaps}){ 
-        if( ( $$multimaps{$key}{'annotation'} ne $no_annotation_flag ) and ($$multimaps{$key}{'score'} ne 0) ){
-	    if($collapsed){
-	      $$transcripts{$$multimaps{$key}{'annotation'}}{$non_unique_type} += $read_tags{$read_id}*($$multimaps{$key}{'score'}/$sum_score); #Divide th
-	      detect_isomir($$multimaps{$key}{'annotation'}, $key, $read_tags{$read_id}*($$multimaps{$key}{'score'}/$sum_score));
-	   }else{
-	      $$transcripts{$$multimaps{$key}{'annotation'}}{$non_unique_type} += ($$multimaps{$key}{'score'}/$sum_score); #Divide the
-	      detect_isomir($$multimaps{$key}{'annotation'}, $key, $$multimaps{$key}{'score'}/$sum_score);
-	    }	    
-	}
-       }
-    }elsif($unique and $annotation){ #Prefer annotation instead of unique in case they do not match.
-       my %annotation_tmp;
-       my $mirna_flag = 0;
-       my %tmp_hash;
-       foreach my $key (keys %{$multimaps}){
-       
-        if($$multimaps{$key}{'annotation'} ne $no_annotation_flag){
-	  my @tmp_arr1 = split($SEPARATOR, $key);
-	  my $start_pos = $tmp_arr1[2];
-	  my $stop_pos = $tmp_arr1[3];
-	  my $read_length = $stop_pos - $start_pos + 1;
-	  $annotation_tmp{$start_pos}{$stop_pos}{$read_length}{$$multimaps{$key}{'annotation'}} = $$multimaps{$key}{'annotation'}; 
-	  my @tmp_arr2 = split($SEPARATOR, $$multimaps{$key}{'annotation'});
-	  $tmp_hash{$tmp_arr2[4]} = $key;
-	}
-       }
-       
-       my $best_fitted_transcript = best_fitted_transcript(\%annotation_tmp);
-       my @bft = split($ALTERNATIVE_TRANS_SEPARATOR, $best_fitted_transcript);
-       my @first_annotation = split($SEPARATOR, $bft[0]);
-       
-       my $annotation_mirna;
-       my $key_mirna; 
-       foreach my $key (keys %{$multimaps}){
-        if($$multimaps{$key}{'annotation'} ne $no_annotation_flag){
-	    if($$multimaps{$key}{'annotation'} =~ /miRNA/ and $$multimaps{$key}{'annotation'} eq $best_fitted_transcript){
-	      $mirna_flag = 1;
-	      $annotation_mirna = $$multimaps{$key}{'annotation'};
-	      $key_mirna = $key;
-	      last;
-	    }
-	}
-       }
-	if($collapsed){
-	  $$transcripts{$best_fitted_transcript}{$non_unique_type} += $read_tags{$read_id};
-	  if($mirna_flag){
-	    detect_isomir($annotation_mirna, $key_mirna, $read_tags{$read_id});
-	  }
-	  
-	}else{
-	  $$transcripts{$best_fitted_transcript}{$non_unique_type}++;
-	  if($mirna_flag){
-	    detect_isomir($annotation_mirna, $key_mirna, 1);
-	  }
-	}
-    }
-    elsif(!$unique and $annotation){ #Only annotation available.
-    
-       my $mirna_flag = 0;
-       my %annotation_tmp;
-       
-       my %hash;
-       
-       my %tmp_hash;
-       
-       foreach my $key (keys %{$multimaps}){
-
-        my @tmp_arr1 = split($SEPARATOR, $key);
-        my $start_pos = $tmp_arr1[2];
-        my $stop_pos = $tmp_arr1[3];
-        my $read_length = $stop_pos - $start_pos + 1;
-
-	$annotation_tmp{$start_pos}{$stop_pos}{$read_length}{$$multimaps{$key}{'annotation'}} = $$multimaps{$key}{'annotation'};
-	$hash{$$multimaps{$key}{'annotation'}} = $key;
-	
-	my @tmp_arr2 = split($SEPARATOR, $$multimaps{$key}{'annotation'});
-	if($$multimaps{$key}{'annotation'} ne $no_annotation_flag){
-	  $tmp_hash{$tmp_arr2[4]} = $key;
-	}
-	
-       }
-             
-       my $best_fitted_transcript = best_fitted_transcript(\%annotation_tmp);
-       my @bft = split($ALTERNATIVE_TRANS_SEPARATOR, $best_fitted_transcript);
-       my @first_annotation = split($SEPARATOR, $bft[0]);
-       
-       my $annotation_mirna;
-       my $key_mirna; 
-       foreach my $key (keys %{$multimaps}){
-        if($$multimaps{$key}{'annotation'} ne $no_annotation_flag){
-	    if($$multimaps{$key}{'annotation'} =~ /miRNA/ and $$multimaps{$key}{'annotation'} eq $best_fitted_transcript){
-	      $mirna_flag = 1;
-	      $annotation_mirna = $$multimaps{$key}{'annotation'};
-	      $key_mirna = $key;
-	      last;
-	    }
-	}
-       }
-	if($collapsed){
-	  $$transcripts{$best_fitted_transcript}{$non_unique_type} += $read_tags{$read_id};
-	 if($mirna_flag){
-	    detect_isomir($annotation_mirna, $key_mirna, $read_tags{$read_id});
-	  }
-	}else{	
-	  $$transcripts{$best_fitted_transcript}{$non_unique_type}++;
-	 if($mirna_flag){
-	    detect_isomir($annotation_mirna, $key_mirna, 1);
-	  }
-	}
-    }
-}
 
 #Create densities of uniquely aligned reads and assign uniquely aligned reads to available annotation.
 sub densities_and_transcripts {
 
-  my $densities = shift;
-  my $tmp = shift;
-  my $transcripts = shift;
-  
+  my %tmp = %{$_[0]};
+
   my $read_id;
   my $chromosome;
   my $strand;
@@ -1571,7 +1571,7 @@ sub densities_and_transcripts {
   my $stop_pos;
   my $read_length;
   
-  foreach my $info (keys %{$tmp}){ #Always only one element because there is only one unique read.
+  foreach my $info (keys %{tmp}){ #Always only one element because there is only one unique read.
 
     my @element = split($SEPARATOR, $info);
     
@@ -1629,17 +1629,17 @@ sub densities_and_transcripts {
     }
 
       #Collapsed reads
-      if(exists $$transcripts{$best_fitted_transcript}{$unique_type}){
+      if(exists $transcripts{$best_fitted_transcript}{$unique_type}){
 	if($collapsed){
-	  $$transcripts{$best_fitted_transcript}{$unique_type} += $read_tags{$read_id};	  
+	  $transcripts{$best_fitted_transcript}{$unique_type} += $read_tags{$read_id};	  
 	}else{
-	  $$transcripts{$best_fitted_transcript}{$unique_type}++;
+	  $transcripts{$best_fitted_transcript}{$unique_type}++;
 	}
       }else{
 	if($collapsed){
-	  $$transcripts{$best_fitted_transcript}{$unique_type} = $read_tags{$read_id};
+	  $transcripts{$best_fitted_transcript}{$unique_type} = $read_tags{$read_id};
 	}else{
-	  $$transcripts{$best_fitted_transcript}{$unique_type} = 1;
+	  $transcripts{$best_fitted_transcript}{$unique_type} = 1;
 	}
       }
     }else{ #Store uniquely aligned reads without existing annotation in a file.
@@ -1809,7 +1809,8 @@ If the parameter t_index is left blank, Manatee will create the transcriptome in
 #Store annotation file into hash structures.
 sub process_annotation {
 
-  my($ANNOTATION_FILE, $transcript_name, $annotation, $gtf) = @_; 
+  my $ANNOTATION_FILE = shift;
+  
   if(open ANNOTATION_FILE, "<", $ANNOTATION_FILE) { #Open annotation file provided as input or configuration parameter
       while (my $line = <ANNOTATION_FILE>){
       #Process each line of the annotation file.
@@ -1883,11 +1884,11 @@ sub process_annotation {
 
 	my $transcript_info = $gene_id.$SEPARATOR.$gene_biotype.$SEPARATOR.$gene_name;
 	my $full_info = $chromosome.$SEPARATOR.$strand.$SEPARATOR.$transcript_info.$SEPARATOR.$start.$SEPARATOR.$end;
-	$$annotation->insert($full_info, $start,$end);
+	$annotation->insert($full_info, $start,$end);
 
-	$$gtf{$chromosome}{$strand}{$start}{$end} = $transcript_info;
+	$gtf{$chromosome}{$strand}{$start}{$end} = $transcript_info;
 
-	$$transcript_name{$gene_name} = $full_info;
+	$transcript_name{$gene_name} = $full_info;
       }
     }
   }else{
@@ -1898,27 +1899,30 @@ sub process_annotation {
 
 #Split the input path to file name and path.
 sub get_input_filename_base_path { 
-  my($input_path, $file_name_base, $file_name_path)=@_;
-  $input_path =~ s/^\s+|\s+$//g; # Removing leading and trailing white spaces.
-  my @path_parts = split('/',$input_path);
+
+  my $input = shift;
+  $input =~ s/^\s+|\s+$//g; # Removing leading and trailing white spaces.
+  my @path_parts = split('/',$input);
   my $file_id;
   my $bam_file;
   my $sam_file;
-  if($input_path =~ /.fa$/ || $input_path =~ /.fq$/){
-    $$file_name_base = substr($path_parts[$#path_parts], 0, -3);
-    $$file_name_path = substr($input_path, 0, -(3+length($$file_name_base)));
-  }elsif($input_path =~ /.fasta$/ || $input_path =~ /.fastq$/){
-    $$file_name_base = substr($path_parts[$#path_parts], 0, -6);
-    $$file_name_path = substr($input_path, 0, -(6+length($$file_name_base)));
+  if($input =~ /.fa$/ || $input =~ /.fq$/){
+    $input_base_name = substr($path_parts[$#path_parts], 0, -3);
+    $input_path = substr($input, 0, -(3+length($input_base_name)));
+  }elsif($input =~ /.fasta$/ || $input =~ /.fastq$/){
+    $input_base_name = substr($path_parts[$#path_parts], 0, -6);
+    $input_path = substr($input, 0, -(6+length($input_base_name)));
   }else{
-    print "FATAL: Could not determine the format of the reads file $input_path .. Accepted extensions: .fa, .fasta, .fq, or .fastq\n";
+    print "FATAL: Could not determine the format of the reads file $input .. Accepted extensions: .fa, .fasta, .fq, or .fastq\n";
     exit;
   }
 }
 
 #Process input fasta/fa file, merge identical reads, store all the reads to specific hashes.
-sub process_input{
-  my($input_file, $output_file,$collapsed_reads,$read_tags) = @_;
+sub process_input {
+
+  my $input_file = shift;
+  my $output_file = shift;
   open(OUTPUT, ">", $output_file) or die "Couldn't open output file for reading: $output_file\n\n";
   open(INPUT, "<", $input_file) or die "Couldn't open input file: $input_file\n\n";
   if($input_file_format eq $fastq_format){ # Fastq file
@@ -1942,8 +1946,8 @@ sub process_input{
       }
       $line_nr++;
     }
-    foreach my $sequence (keys %collapsed_reads){
-      foreach my $quality (keys $collapsed_reads{$sequence}){
+    foreach my $sequence (keys %{collapsed_reads}){
+      foreach my $quality (keys %{$collapsed_reads{$sequence}}){
 	  my $read_name = "Manatee"."_".$counter;
 	  print OUTPUT "\@$read_name\n";
 	  print OUTPUT "$sequence\n";
@@ -1969,7 +1973,7 @@ sub process_input{
 	}
 	$line_nr++;
       }
-      foreach my $sequence (keys %collapsed_reads){
+      foreach my $sequence (keys %{collapsed_reads}){
 	  my $read_name = "Manatee"."_".$counter;
 	  print OUTPUT ">$read_name\n";
 	  print OUTPUT "$sequence\n";
@@ -1988,7 +1992,7 @@ sub write_expressions {
   my %tmp;
   my $i = 0;
   
-  foreach my $transcript (sort keys %transcripts){  
+  foreach my $transcript (sort keys %{transcripts}){  
   #print "TRRRRR: $transcript\n";
     my @arr1 = split($ALTERNATIVE_TRANS_SEPARATOR, $transcript);
     my @arr2 = split($SEPARATOR, $arr1[0]);
@@ -2002,7 +2006,7 @@ sub write_expressions {
     my $sum = 0;
     my $unique = 0;
 
-    foreach my $type (sort keys $transcripts{$transcript}){
+    foreach my $type (sort keys %{$transcripts{$transcript}}){
       if($type eq $unique_type){
 	$unique = $transcripts{$transcript}{$type};
 	$sum += $transcripts{$transcript}{$type};
@@ -2041,9 +2045,9 @@ sub write_expressions {
   
   my %common;
   #Extract common with the highest read counts.
-  foreach my $first_transcript (sort keys %tmp){
+  foreach my $first_transcript (sort keys %{tmp}){
     my %alternative = ();
-    foreach my $all_transcripts (keys $tmp{$first_transcript}){
+    foreach my $all_transcripts (keys %{$tmp{$first_transcript}}){
     
         $alternative{$all_transcripts}{'sum'} = $tmp{$first_transcript}{$all_transcripts}{'sum'};
         $alternative{$all_transcripts}{'rpm'} = $tmp{$first_transcript}{$all_transcripts}{'rpm'};
@@ -2057,7 +2061,7 @@ sub write_expressions {
     my $sum_rpm = 0;
     my $biotype;
     my $keep_trans = $EMPTY;
-    foreach my $all_transcripts (keys %alternative){
+    foreach my $all_transcripts (keys %{alternative}){
       if($max_reads <= $alternative{$all_transcripts}{'sum'}){
 	$keep_trans = $all_transcripts;
       }
@@ -2073,8 +2077,8 @@ sub write_expressions {
   }
  
   print $TRANSCRIPTS_COUNTS "Transcript Name\tBiotype\tCount\tRPM\tUnique Reads\tOther possible transcripts\n";
-  foreach my $first_transcript (sort keys %common){
-    foreach my $keep_trans (keys $common{$first_transcript}){
+  foreach my $first_transcript (sort keys %{common}){
+    foreach my $keep_trans (keys %{$common{$first_transcript}}){
   
       my $sum = $common{$first_transcript}{$keep_trans}{'sum'};
       my $rpm = $common{$first_transcript}{$keep_trans}{'rpm'};
