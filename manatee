@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+##!/usr/bin/perl -w
 use strict;
 use warnings;
 
@@ -20,7 +20,7 @@ for(@modules) {
 }
 
 #Software version.
-my $version = '1.0';
+my $version = '1.2';
 
 #Path to Bowtie genome index.
 my $path_to_bowtie_index;
@@ -112,6 +112,12 @@ my $NA = 'NA';
 
 #Number of transcripts with the highest aligner score as obtained from the alignment to the transcriptome.
 my $n_best_transcripts = 3;
+
+#The max number of reads assigned to a candidate transcript for a read in alignment against transcriptome mode.
+my %transcripts_transcriptome_maxExp;
+
+#Best scores for transcripts in alignment against transcriptome mode.
+my %transcripts_transcriptome_bestScore;
 
 #Check if program was called without any input parameters or if user asked for help.
 if(!exists $ARGV[0] || $ARGV[0] =~ /-h|--h|-help|--help/){
@@ -784,23 +790,33 @@ my %tmp_hash;
 my $count = 0;
 my $first = 1;
 my $prev_alignment_score;
+
+my %read_attot; # Reads that were assigned to the same transcripts more than one time. 
+                # That might be due to the very short length of the read. 
       
    foreach my $alignment_score (sort {$a <=> $b} keys %{trans_aligned_reads}){
     foreach my $transcript_name (sort keys %{$trans_aligned_reads{$alignment_score}}){  
       
-	my $transcript_info = $trans_aligned_reads{$alignment_score}{$transcript_name};
-	#Select n transcripts with the highest score as obtained from the aligner.
-	$transcript_name =~ s/^\s+|\s+$//g;
-	if($first){ $prev_alignment_score = $alignment_score; $first = 0; $count++; }
-	  if($alignment_score ne $prev_alignment_score) # Increase count only for not equal alignment scores.
-	  {
-	    $count++;
+        if(!exists $read_attot{$transcript_name}){
+        
+	  my $transcript_info = $trans_aligned_reads{$alignment_score}{$transcript_name};
+	  #Select n transcripts with the highest score as obtained from the aligner.
+	  $transcript_name =~ s/^\s+|\s+$//g;
+	  if($first){ $prev_alignment_score = $alignment_score; $first = 0; $count++; }
+	    if($alignment_score ne $prev_alignment_score) # Increase count only for not equal alignment scores.
+	    {
+	      $count++;
+	    }
+	  $tmp_hash{$alignment_score}{$transcript_name} = $transcript_info;
+	  if($count eq $n_best_transcripts){ #Process n best transcript scores and select the one with the 
+	    return(\%tmp_hash);
 	  }
-	$tmp_hash{$alignment_score}{$transcript_name} = $transcript_info;
-	if($count eq $n_best_transcripts){ #Process n best transcript scores and select the one with the 
-	  return(\%tmp_hash);
+	  $prev_alignment_score = $alignment_score;
+	
 	}
-	$prev_alignment_score = $alignment_score;
+	
+	$read_attot{$transcript_name} = $transcript_name;
+	
     }
    }
    return(\%tmp_hash);
@@ -827,10 +843,26 @@ sub store_transcript {
 	    $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score} += $transcripts{$key}{$type};	   
 	  }
 	}else{ #If there is not existing assigned transcript, store to the hash.
-	  $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score}++;
+	  $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score} = 0;
 	}
     }
   }
+  
+  my $max_exp_trans = -1;
+  foreach my $sequence (keys %{$transcripts_transcriptome{$read_id}}){
+    foreach my $key (keys %{$transcripts_transcriptome{$read_id}{$sequence}}){
+       foreach my $info (keys %{$transcripts_transcriptome{$read_id}{$sequence}{$key}}){
+        foreach my $score (keys %{$transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}}){
+	  if($transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score} >= $max_exp_trans){
+	    $max_exp_trans = $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score};
+	    $transcripts_transcriptome_maxExp{$read_id}{$max_exp_trans}++;	    
+	  }
+	    $transcripts_transcriptome_bestScore{$read_id}{$score}++;
+        }
+       }
+    }
+  }
+  
 }
 
 #Store transcripts from transcriptome alignment to transcripts hash.
@@ -840,6 +872,7 @@ sub store_transcripts {
   my $sum = 0;
   my $nr_keys = keys %transcripts_transcriptome;
   my $trans_count;
+  
   foreach my $read_id (sort keys %transcripts_transcriptome){
   
     $trans_count = 0;
@@ -848,6 +881,19 @@ sub store_transcripts {
     my $min_align_score = 1000000;
     my $existing_trans_count_counter = 0;
     my $trans_flag = 0;
+    my $divide; #Divide the read among transcripts with equal maximum expression when one of the transcripts happens to be miRNA.
+    my $bestScores_count;
+    
+    foreach my $max (sort {$b <=> $a} keys %{$transcripts_transcriptome_maxExp{$read_id}}){
+      $divide = $transcripts_transcriptome_maxExp{$read_id}{$max};
+      last;
+    }
+  
+    foreach my $bestSc (sort {$a <=> $b} keys %{$transcripts_transcriptome_bestScore{$read_id}}){   
+      $bestScores_count = $transcripts_transcriptome_bestScore{$read_id}{$bestSc};
+      last;
+    }
+    
     foreach my $sequence (sort keys %{$transcripts_transcriptome{$read_id}}){
       foreach my $key (sort keys %{$transcripts_transcriptome{$read_id}{$sequence}}){
 	foreach my $info (keys %{$transcripts_transcriptome{$read_id}{$sequence}{$key}}){	
@@ -881,9 +927,14 @@ sub store_transcripts {
     my %a;
     my $glob_seq;
     my $glob_info;
+    my $bestScores_count_tmp = $bestScores_count;
+    my $divide_tmp = $divide;
+    my $divide_flag = 0;
+    my $bestScores_count_flag = 0;
+    
     FOO: {	
     foreach my $trans_count (sort {$b <=> $a} keys %tmp_tmp){
-      foreach my $score (keys %{$tmp_tmp{$trans_count}}){
+      foreach my $score (sort {$a <=> $b} keys %{$tmp_tmp{$trans_count}}){
 	foreach my $read_id (keys %{$tmp_tmp{$trans_count}{$score}}){
 
 	      foreach my $key (sort keys %{$tmp_tmp{$trans_count}{$score}{$read_id}}){
@@ -894,18 +945,25 @@ sub store_transcripts {
 		
 		      $glob_seq = $sequence;
 		      $glob_info = $info;
-
-		      if($trans_flag){# Check whether for reads aligned to the transcriptome there are
+		      
+		      $bestScores_count_tmp--;
+		      $divide_tmp--;
+		      
+		      if($mirna_indicator){# If miRNA transcripts are present in the transcripts then chose the best alignment score.
+			  $a{$read_id}{$key}{$info}{$sequence} = $trans_count;
+			  if($bestScores_count_tmp eq 0){
+			    $bestScores_count_flag = 1;
+			    last FOO;
+			  }			  
+		      }
+		      elsif($trans_flag){# Check whether for reads aligned to the transcriptome there are
 		      #already assigned transcripts from previous analysis
 			$counter++;
 			$a{$read_id}{$key}{$info}{$sequence} = $trans_count;
-		      }elsif($mirna_indicator){# If miRNA transcripts are present in the transcripts then chose the best alignment score.
-			if($min_align_score eq $score){
-			  $a{$read_id}{$key}{$info}{$sequence} = $trans_count;
+			if($divide_tmp eq 0){
+			  $divide_flag=1;
 			  last FOO;
 			}
-		      #If no miRNA transcripts present and no already assigned reads
-		      #to transcripts.
 		      }else{
 			if($alt_trans eq $EMPTY){
 			  $alt_trans = $key;
@@ -960,21 +1018,32 @@ sub store_transcripts {
 	    
 	    #Case of uniquely aligned read without previously existing matching annotation.
 	    if( exists $no_indication_tag{$read_id} and $no_indication_tag{$read_id}{'counter'} eq 1 ){
+		
+	      if($divide_flag){
+		$transcripts{$key}{$unique_type} += $read_tags{$read_id}/$divide;
+		detect_isomir($key, create_info($key, $sequence) ,$read_tags{$read_id}/$divide);
+	      }elsif($bestScores_count_flag){
+		$transcripts{$key}{$unique_type} += $read_tags{$read_id}/$bestScores_count;
+		detect_isomir($key, create_info($key, $sequence) ,$read_tags{$read_id}/$bestScores_count);
+	      }else{
 		$transcripts{$key}{$unique_type} += $read_tags{$read_id};
 		detect_isomir($key, create_info($key, $sequence) ,$read_tags{$read_id});
-	     }else{
+	      }
+    
+	    }else{
+	    
+	      if($divide_flag){
+		$transcripts{$key}{$non_unique_type} += $read_tags{$read_id}/$divide;
+		detect_isomir($key, create_info($key, $sequence) ,$read_tags{$read_id}/$divide);
+	      }elsif($bestScores_count_flag){
+		$transcripts{$key}{$non_unique_type} += $read_tags{$read_id}/$bestScores_count;
+		detect_isomir($key, create_info($key, $sequence) ,$read_tags{$read_id}/$bestScores_count);
+	      }else{
 		$transcripts{$key}{$non_unique_type} += $read_tags{$read_id};
 		detect_isomir($key, create_info($key, $sequence) ,$read_tags{$read_id});
-	    }
-	    
-	  }else{
-	    if( exists $no_indication_tag{$read_id} and $no_indication_tag{$read_id}{'counter'} eq 1 ){
-		$transcripts{$key}{$unique_type}++;
-		detect_isomir($key, create_info($key, $sequence) , 1);
-	    }else{
-		$transcripts{$key}{$non_unique_type}++;
-		detect_isomir($key, create_info($key, $sequence) , 1);
-	    }
+		
+	     }		
+	   }
 	  }
 	 }
 	}
@@ -1749,7 +1818,7 @@ sub print_user_input {
   print "Reference genome file: $reference_genome\n\n";
   if($bowtie_trans_index eq $NOT_SPECIFIED){
     if(check_index($bowtie_trans_index) eq $NOT_SPECIFIED){
-      print "Transcriptome index: not specifie. Index will be generated based on provided annotation.\n\n";
+      print "Transcriptome index: not specified. Index will be generated based on provided annotation.\n\n";
     }else{
       print "Transcriptome index: not specified. Index related to provided annotation file already exists in trans-index directory.\n\n";
     }
