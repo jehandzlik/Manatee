@@ -1,4 +1,4 @@
-##!/usr/bin/perl -w
+#!/usr/bin/perl -w
 use strict;
 use warnings;
 
@@ -440,14 +440,17 @@ print "END OF EXECUTION\n\n";
 
 ####### SUBROUTINES #######
 
-#Extract .tar.gz files.
+#Extract .gz files.
 sub decompress {
 
-  if($input_file =~ /tar.gz$/){
-    `tar xvzf $input_file -C $output_path`;   
-    my $extracted_input_file = `ls $output_path`;
-    $extracted_input_file =~ s/^\s+|\s+$//g; # Removing leading and trailing white spaces.
-    $input_file = $output_path.$extracted_input_file;
+  if($input_file =~ /.gz$/){
+    my $gunzip_output = `gunzip -l $input_file`; # List file content.
+    my @gunzip_output = split("\n", $gunzip_output);
+    @gunzip_output = split(" ", $gunzip_output[1]);
+    my @gunzip_name = split("/",$gunzip_output[3]);
+    my $gunzip_name = $gunzip_name[$#gunzip_name];
+    `gunzip -c $input_file > $output_path$gunzip_name`;   
+    $input_file = $output_path.$gunzip_name;
   }
 }
 
