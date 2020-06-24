@@ -432,7 +432,7 @@ my $isomirs_file = $output_path.$input_base_name.'_Manatee_isomirs.tsv';
 write_isomirs();
 
 #Remove all the temp files from the working directory.
-clean();
+#clean();
 
 print "Output directory: $output_path\n\n";
 
@@ -463,7 +463,7 @@ sub write_isomirs {
     foreach my $trans_name (sort keys %{isomirs}){
       foreach my $sequence (keys %{$isomirs{$trans_name}}){
 	
-	  my $rpm = ($isomirs{$trans_name}{$sequence}*(10^6))/($mapped_reads);
+	  my $rpm = ($isomirs{$trans_name}{$sequence}*(10**6))/($mapped_reads);
 	  print $fp "$trans_name\t$isomirs{$trans_name}{$sequence}\t$rpm\t$sequence\t\n";
       }
     }
@@ -1540,9 +1540,10 @@ my $prev_line;
   
   close(SAM_FILE);
   close($TMP_SAM);
+  print "Mapped reads: $mapped_reads\n";
 }
 
-#Apply the relation for best fitted transcript.
+#Select the best fitted transcript.
 sub best_fitted_transcript {
 
   my %tmp = %{$_[0]};
@@ -1551,7 +1552,7 @@ sub best_fitted_transcript {
   my $tmp_best_fitted_transcript = "";
   my $existing_best_fitted_transcript;
   my $ratio;
-  my $min_ratio = 1000000000;
+  my $min_ratio = 10**9; #Select some large number.
   my $mirna_flag = 0;
   my $test_flag = 0;
   #Check whether any of the alignments is associated with miRNA annotation.
@@ -2102,7 +2103,7 @@ sub write_expressions {
     
     my $rpm;
     if($mapped_reads > 0){
-      $rpm = ($sum*(10^6))/($mapped_reads); #Reads per million calculation.
+      $rpm = ($sum*(10**6))/($mapped_reads); #Reads per million calculation.
     }else{
       $rpm = $NA;
     }
