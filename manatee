@@ -394,7 +394,7 @@ reads_process($bowtie_output);
 quantify();
 
 #Tmp file for alignment against transcriptome.
-my $trans_unaligned_0 = $output_path.$input_base_name.'_Manate_transcriptome_unaligned_0.fa';
+my $trans_unaligned_0 = $output_path.$input_base_name.'_Manatee_transcriptome_unaligned_0';
 
 my %transcripts_transcriptome;
 my %no_indication_tag;
@@ -404,14 +404,14 @@ my $trans_aligned = $output_path.$input_base_name.'_Manatee_transcriptome_aligne
 align_against_transcriptome($reads_exceeding_m, $trans_unaligned_0, 1, $trans_aligned); #One mismatch
 
 $trans_aligned = $output_path.$input_base_name.'_Manatee_transcriptome_aligned_1.sam';
-my $trans_unaligned_1 = $output_path.$input_base_name.'_Manatee_transcriptome_unaligned_1.fa';
+my $trans_unaligned_1 = $output_path.$input_base_name.'_Manatee_transcriptome_unaligned_1';
 
 #Alignment against transcriptome of unaligned reads in bowtie alignment.
 align_against_transcriptome($bowtie_unaligned, $trans_unaligned_1, 2, $trans_aligned); #Two mismatches
 
 $trans_aligned = $output_path.$input_base_name.'_Manatee_transcriptome_aligned_2.sam';
 my $trans_unaligned_prev = $trans_unaligned_1;
-my $trans_unaligned_2 = $output_path.$input_base_name.'_Manatee_transcriptome_unaligned_2.fa';
+my $trans_unaligned_2 = $output_path.$input_base_name.'_Manatee_transcriptome_unaligned_2';
 
 #Augmented number of mismatches.
 align_against_transcriptome($trans_unaligned_prev, $trans_unaligned_2, 3, $trans_aligned);
@@ -1518,7 +1518,12 @@ my $prev_line;
 	       %tmp = ();
 	       $tmp{generate_info($line, $read_id)} = generate_info($line, $read_id);
 	       
-	       $mapped_reads++;
+	       
+	       if($collapsed){
+		$mapped_reads += $read_tags{$read_id};
+	       }else{
+		$mapped_reads++;
+	       }
 	  }
 	  $prev_read_id = $read_id;
 	  $prev_line = $line;
@@ -1536,7 +1541,12 @@ my $prev_line;
       print $TMP_SAM "$info$SEPARATOR$mltp\n";
     }
   }
-  $mapped_reads++;
+
+  if($collapsed){
+    $mapped_reads += $read_tags{$read_id};
+    }else{
+    $mapped_reads++;
+  }
   
   close(SAM_FILE);
   close($TMP_SAM);
@@ -1693,7 +1703,6 @@ sub densities_and_transcripts {
       my $mirna_key = $chromosome.$SEPARATOR.$strand.$SEPARATOR.$start.$SEPARATOR.$stop.$SEPARATOR.$sequence.$SEPARATOR.$quality;
 
       if($collapsed){
-
 	      detect_isomir($mirna_annotation, $mirna_key, $read_tags{$read_id});
       }else{
 	      detect_isomir($mirna_annotation, $mirna_key, 1);
