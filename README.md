@@ -34,8 +34,6 @@ The following compontents are included in the Manatee package.
     
     README.md          % this file
 
-    trans-index        % directory where the transcriptome index will be stored
-
 
 ### USAGE with configuration file
 
@@ -195,3 +193,17 @@ Clusters of unannotated reads will be merged if the distance between them is equ
 
 
 </table>
+
+### OUTPUT
+
+A successful run will produce the following three output files in the output directory
+
+- &lt;*inputName&gt;****_Manatee_counts.tsv***
+- &lt;*inputName&gt;****_Manatee_clusters.tsv***
+- &lt;*inputName&gt;****_Manatee_isomirs.tsv***.
+
+Depending on the input, &lt;*inputName&gt;****_Manatee_clusters.tsv*** might not be generated.
+
+### ADDITIONAL COMMENTS
+
+The input data should be trimmed for adapters, barcodes, etc. and too short reads should be discared from the analysis. 
