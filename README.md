@@ -1,5 +1,5 @@
 # Manatee
-Manatee version 1.0
+Manatee version 1.2
 
 ## What is Manatee?
 
@@ -100,7 +100,7 @@ Path to directory where the output will be stored.
 
 </td><td>
 	
-Path and basename of the genome index to be searched. The basename is the name of any of the index files up to but not including the final .1.ebwt/.rev.1.ebwt/etc. 
+Path and basename of the genome Bowtie index to be searched. The basename is the name of any of the index files up to but not including the final .1.ebwt/.rev.1.ebwt/etc. 
 
 </td></tr><tr><td>
 
@@ -131,7 +131,7 @@ Path to non coding annotation file. File should contain the following tab sepera
 
 </td><td>
 
-Path and basename of the transcriptome index to be searched. The basename is the name of any of the index files up to but not including the final .1.ebwt/.rev.1.ebwt/etc. If left blank, in case of non existing index, Manatee will generate transcriptome index based on the provided non coding annotation and will store that index within the transcripts directory.
+Path and basename of the transcriptome Bowtie index to be searched. The basename is the name of any of the index files up to but not including the final .1.ebwt/.rev.1.ebwt/etc. If left blank, in case of non existing index, Manatee will generate transcriptome index based on the provided non coding annotation and will store that index within the transcripts directory.
 </td></tr><tr><td>
 
     -cores <int>
@@ -208,5 +208,5 @@ Depending on the input, &lt;*inputName&gt;****_Manatee_clusters.tsv*** might not
 
 ### ADDITIONAL COMMENTS
 
-- Input data should be trimmed for adapters and barcodes. Too short reads and reads with low sequencing quality should be discarded from the input. 
+- Input data should be trimmed for adapters and barcodes before running Manatee. Too short reads and reads with low sequencing quality should be discarded from the input as well. 
 - Example of annotation file in GTF format compatible with Manatee is included in the 'annotation' branch. 
