@@ -209,4 +209,5 @@ Depending on the input, &lt;*inputName&gt;****_Manatee_clusters.tsv*** might not
 ### ADDITIONAL COMMENTS
 
 - Input data should be trimmed for adapters and barcodes before running Manatee. Too short reads and reads with low sequencing quality should be discarded from the input as well. 
-- Example of annotation file in GTF format compatible with Manatee is included in the 'annotation' branch. 
+- Example of annotation file in GTF format compatible with Manatee is included in the 'annotation' branch.
+- Genome and transcriptome Bowtie index files should be build using Bowtie 1. Bowtie 1 is included in the Manatee package. 
