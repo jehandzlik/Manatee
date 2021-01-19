@@ -3,7 +3,7 @@ Manatee version 1.2
 
 ## What is Manatee?
 
-	Manatee is a tool for detection, quantification and analysis of small ncRNAs 
+	Manatee is a tool for detection, quantification, and analysis of small ncRNAs 
 	from next-generation sequencing data.
 	
 ### DEPENDENCIES
