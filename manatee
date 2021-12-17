@@ -20,7 +20,7 @@ for(@modules) {
 }
 
 #Software version.
-my $version = '1.2';
+my $version = '1.3';
 
 #Path to Bowtie genome index.
 my $path_to_bowtie_index;
@@ -296,6 +296,23 @@ if(length($samtools_availability) == 0){
   exit;
 }
 
+#Path to bowtie aligner.
+my $path_to_bowtie = $RealBin.'/bowtie-1.0.1/bowtie';
+
+my $path_to_bowtie_build = $RealBin.'/bowtie-1.0.1/bowtie-build';
+
+#Check whether the bowtie file is executable
+if(! -x $path_to_bowtie){
+  print("\nChange the permission rights to executable for: $path_to_bowtie \n\n");
+  exit;
+}
+
+#Check whether the bowtie-build file is executable
+if(! -x $path_to_bowtie_build){
+  print("\nChange the permission rights to executable for: $path_to_bowtie_build \n\n");
+  exit;
+}
+
 #Check whether the ouput directory exists.
 if (-d $output_path){
   print "\nOutput directory $output_path already exists.\n\n";
@@ -323,6 +340,7 @@ my %transcript_name;
 
 #Define non-coding annotation hash.
 my %gtf;
+my %gtf_simplified;
 my $annotation = Set::IntervalTree->new;
 
 #Process and store annotation to hash.
@@ -351,9 +369,6 @@ if($collapsed){
 my $bowtie_output = $output_path.$input_base_name.'_Manatee_bowtie.output.sam';
 my $bowtie_unaligned = $output_path.$input_base_name.'_Manatee_bowtie.unaligned.fa'; 
 my $reads_exceeding_m = $output_path.$input_base_name.'_Manatee_bowtie.over_m.fa';
-
-#Path to bowtie aligner.
-my $path_to_bowtie = $RealBin.'/bowtie-1.0.1/bowtie';
 
 #Constrution of bowtie call.
 my $bowtie_call;
@@ -825,7 +840,7 @@ my %read_attot; # Reads that were assigned to the same transcripts more than one
    return(\%tmp_hash);
 }
 
-#Store n best transcripts for selected reads in a proper global structure.
+#Store n best transcripts for selected reads into a proper global structure.
 sub store_transcript {
 
   my %tmp_hash = %{$_[0]};
@@ -839,13 +854,13 @@ sub store_transcript {
  
       my $info = $tmp_hash{$score}{$transcript_name};
       $info =~ s/^\s+|\s+$//g;
-	#Check whether a specific transcript was already included in previous steps.
+	#Check whether a specific transcript was already included in the previous steps.
 	if(exists $transcripts{$key}){ 
 	  foreach my $type (keys %{$transcripts{$key}}){
 	    #Checking for assigned transcript counts.
 	    $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score} += $transcripts{$key}{$type};	   
 	  }
-	}else{ #If there is not existing assigned transcript, store to the hash.
+	}else{ #If there is not existing assigned transcript, store it to the hash.
 	  $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score} = 0;
 	}
     }
@@ -903,11 +918,11 @@ sub store_transcripts {
 	  foreach my $score (keys %{$transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}}){	
 	  $sum += $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score};	  
 	  $tmp{$read_id}{$sequence}{$key}{$info} = $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score};
-	  if($min_align_score >= $score){#If miRNA is present among the transcripts from alignment, the final transcript
+	  if($min_align_score >= $score){#If miRNA is present among the transcripts from the alignment, the final transcript
 	  #that will be kept is the one with the best alignment score.
 	    $min_align_score = $score;
 	  }
-	  #How many reads correspond to that transcript from previous calculations.
+	  #How many reads correspond to that transcript from the previous calculations.
 	  my $existing_trans_count = $transcripts_transcriptome{$read_id}{$sequence}{$key}{$info}{$score};
 	  $tmp_tmp{$existing_trans_count}{$score}{$read_id}{$key}{$info}{$sequence} = $existing_trans_count;
 	  $trans_count++;
@@ -959,8 +974,8 @@ sub store_transcripts {
 			    last FOO;
 			  }			  
 		      }
-		      elsif($trans_flag){# Check whether for reads aligned to the transcriptome there are
-		      #already assigned transcripts from previous analysis
+		      elsif($trans_flag){# For reads aligned to the transcriptome, check whether there are
+		      #transcripts from the previous analysis assigned already to those reads
 			$counter++;
 			$a{$read_id}{$key}{$info}{$sequence} = $trans_count;
 			if($divide_tmp eq 0){
@@ -1277,7 +1292,7 @@ while(my $line = <$TMP_SAM>){
 
 }
 
-#Main function for assignment of transcript counts in the designated structure.
+#Main function for transcript count assignment.
 sub assign {
 
    my %multimaps = %{$_[0]};
@@ -1465,7 +1480,8 @@ sub assign {
     }
 }
 
-#Process mapped reads and create temp file with aligned reads and their counts.
+#Process mapped reads and create temp file with aligned 
+## reads and their corresponding counts.
 sub reads_process {
 
 my $SAM_FILE = shift;
@@ -1608,7 +1624,7 @@ sub best_fitted_transcript {
 		}
 	      }
 	     
-	    }else{ #If no miRNA annotation was 
+	    }else{ #If no miRNA annotation was used 
 	      if($best_fitted_transcript eq ""){
 		$best_fitted_transcript = $annotation;
 	      }else{
@@ -1624,7 +1640,7 @@ sub best_fitted_transcript {
 
 }
 
-#Save isomir in a proper structure.
+#Save isomir to a proper structure.
 sub detect_isomir {
 
   my $annotation = shift;
@@ -1971,6 +1987,8 @@ sub process_annotation {
 	$gtf{$chromosome}{$strand}{$start}{$end} = $transcript_info;
 
 	$transcript_name{$gene_name} = $full_info;
+	
+	$gtf_simplified{$gene_id} = $gene_biotype;
       }
     }
   }else{
@@ -1996,6 +2014,7 @@ sub get_input_filename_base_path {
     $input_path = substr($input, 0, -(6+length($input_base_name)));
   }else{
     print "FATAL: Could not determine the format of the reads file $input .. Accepted extensions: .fa, .fasta, .fq, or .fastq\n";
+    remove_output();
     exit;
   }
 }
@@ -2075,14 +2094,14 @@ sub write_expressions {
   my $i = 0;
   
   foreach my $transcript (sort keys %{transcripts}){  
-  #print "TRRRRR: $transcript\n";
+
     my @arr1 = split($ALTERNATIVE_TRANS_SEPARATOR, $transcript);
     my @arr2 = split($SEPARATOR, $arr1[0]);
     my $chromosome = $arr2[0];
     my $strand = $arr2[1];
     my $id = $arr2[2];
     my $biotype = $arr2[3];
-    my $first_transcript = $arr2[4];
+    my $first_transcript = $arr2[2];
     my $start_pos = $arr2[5];
     my $stop_pos = $arr2[6];
     my $sum = 0;
@@ -2096,16 +2115,16 @@ sub write_expressions {
 	$sum += $transcripts{$transcript}{$type};
       }
     }
-    
+   
     shift @arr1;
     my $all_transcripts = $EMPTY; #Add the first transcript. 
     foreach my $element (@arr1){
       my @arr = split($SEPARATOR, $element);
-        if($all_transcripts !~ /$arr[4]/ and $arr[4] ne $first_transcript){ #Check for double transcripts.
+        if($all_transcripts !~ /$arr[2]/ and $arr[2] ne $first_transcript){ #Check for double transcripts.
 	  if($all_transcripts eq $EMPTY){
-	    $all_transcripts = $arr[4]
+	    $all_transcripts = $arr[2]
 	  }else{
-	    $all_transcripts = $all_transcripts.$ALTERNATIVE_TRANS_SEPARATOR_FILE.$arr[4];
+	    $all_transcripts = $all_transcripts.$ALTERNATIVE_TRANS_SEPARATOR_FILE.$arr[2];
 	  }	  
 	}
     }
@@ -2137,6 +2156,7 @@ sub write_expressions {
         $alternative{$all_transcripts}{'biotype'} = $tmp{$first_transcript}{$all_transcripts}{'biotype'};
         
     }
+    
     my $max_reads = 0;
     my $sum_reads = 0;
     my $sum_unique = 0;
@@ -2159,17 +2179,24 @@ sub write_expressions {
   }
  
   print $TRANSCRIPTS_COUNTS "Transcript Name\tBiotype\tCount\tRPM\tUnique Reads\tOther possible transcripts\n";
-  foreach my $first_transcript (sort keys %{common}){
-    foreach my $keep_trans (keys %{$common{$first_transcript}}){
+
   
-      my $sum = $common{$first_transcript}{$keep_trans}{'sum'};
-      my $rpm = $common{$first_transcript}{$keep_trans}{'rpm'};
-      my $unique = $common{$first_transcript}{$keep_trans}{'unique'};
-      my $biotype = $common{$first_transcript}{$keep_trans}{'biotype'};
+  foreach my $gene_id (sort keys %{gtf_simplified}){
+    if(exists $common{$gene_id}){
+      foreach my $keep_trans (keys %{$common{$gene_id}}){
+  
+	my $sum = $common{$gene_id}{$keep_trans}{'sum'};
+	my $rpm = $common{$gene_id}{$keep_trans}{'rpm'};
+	my $unique = $common{$gene_id}{$keep_trans}{'unique'};
+	my $biotype = $common{$gene_id}{$keep_trans}{'biotype'};
+	
+	print $TRANSCRIPTS_COUNTS "$gene_id\t$biotype\t";
+	print $TRANSCRIPTS_COUNTS "$sum\t$rpm\t$unique\t$keep_trans\n";
       
-      print $TRANSCRIPTS_COUNTS "$first_transcript\t$biotype\t";
-      print $TRANSCRIPTS_COUNTS "$sum\t$rpm\t$unique\t$keep_trans\n";
-      
+      }
+    }else{
+      print $TRANSCRIPTS_COUNTS "$gene_id\t$gtf_simplified{$gene_id}\t";
+      print $TRANSCRIPTS_COUNTS "0\t0\t0\n";
     }
   }
 }
@@ -2196,4 +2223,10 @@ sub clean {
 	  }
 	 }
 	 
+ }
+ 
+ sub remove_output {
+ 
+	rmdir $output_path;
+ 
  }
