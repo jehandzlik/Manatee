@@ -1,5 +1,5 @@
 # Manatee
-Manatee version 1.2
+Manatee version 1.3
 
 ## What is Manatee?
 
