@@ -38,7 +38,7 @@ The following compontents are included in the Manatee package.
 ### USAGE with configuration file
 
 ###### Syntax:
-`Manatee -config <file> -i <file> -o <dir>`
+`manatee -config <file> -i <file> -o <dir>`
 
 <table><tr><td>
 
@@ -74,7 +74,7 @@ Path to directory where the output will be stored.
 ### USAGE with input parameters
 
 ###### Syntax:
-`Manatee [OPTIONS] -i <file> -o <dir> -index <ebwt> -genome <file> -annotation <file>`
+`manatee [OPTIONS] -i <file> -o <dir> -index <ebwt> -genome <file> -annotation <file>`
 
 <table>
 <tr><td>
